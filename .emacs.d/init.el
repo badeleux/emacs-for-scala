@@ -1,3 +1,9 @@
+;; If necessary, make sure "sbt" and "scala" are in the PATH environment
+(setenv "PATH" (concat "/usr/local/bin/sbt:" (getenv "PATH")))
+(setenv "PATH" (concat "/usr/local/bin/scala:" (getenv "PATH")))
+
+(setq debug-on-error t)
+
 (x-focus-frame nil)
 (setq mac-command-modifier 'super)
 
@@ -9,7 +15,7 @@
   (add-to-list 'package-archives '("gnu" . "http://elpa.gnu.org/packages/")))
 
 ;; List the package we want
-(setq package-list '(ensime magit multiple-cursors move-text find-file-in-project dired-details ace-jump-mode dirtree color-theme color-theme-solarized yasnippet window-number expand-region))
+(setq package-list '(ensime magit multiple-cursors move-text find-file-in-project dired-details ace-jump-mode dirtree color-theme color-theme-solarized yasnippet window-number))
 
 (package-initialize) 
 
@@ -46,7 +52,10 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(custom-safe-themes (quote ("fc5fcb6f1f1c1bc01305694c59a1a861b008c534cae8d0e48e4d5e81ad718bc6" default)))
+ '(custom-safe-themes
+   (quote
+    ("fc5fcb6f1f1c1bc01305694c59a1a861b008c534cae8d0e48e4d5e81ad718bc6" default)))
+ '(sbt:program-name "/usr/local/bin/sbt")
  '(tool-bar-mode nil))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
@@ -157,6 +166,32 @@
   (search-backward "def "))
 (define-key global-map (kbd "M-S d") 'search-to-prev-def)
 
+(defun my-mark-current-word (&optional arg allow-extend)
+    "Put point at beginning of current word, set mark at end."
+    (interactive "p\np")
+    (setq arg (if arg arg 1))
+    (if (and allow-extend
+             (or (and (eq last-command this-command) (mark t))
+                 (region-active-p)))
+        (set-mark
+         (save-excursion
+           (when (< (mark) (point))
+             (setq arg (- arg)))
+           (goto-char (mark))
+           (forward-word arg)
+           (point)))
+      (let ((wbounds (bounds-of-thing-at-point 'word)))
+        (unless (consp wbounds)
+          (error "No word at point"))
+        (if (>= arg 0)
+            (goto-char (car wbounds))
+          (goto-char (cdr wbounds)))
+        (push-mark (save-excursion
+                     (forward-word arg)
+                     (point)))
+        (activate-mark))))
+(define-key global-map (kbd "C-`") 'my-mark-current-word)
+
 (setq-default indent-tabs-mode nil)
 (setq-default tab-width 2)
 (setq indent-line-function 'insert-tab)
@@ -194,9 +229,10 @@
 
 (global-set-key (kbd "s-f") 'find-file-in-project)
 
-;; Put temporary and backup files elsewhere
+ ;; Put temporary and backup files elsewhere
 (setq auto-save-file-name-transforms
-          `((".*" ,(concat user-emacs-directory "auto-save/") t))) 
+      `((".*" ,temporary-file-directory t)))
+
 (setq backup-directory-alist
       `(("." . ,(expand-file-name
                  (concat user-emacs-directory "backups")))))
@@ -205,7 +241,3 @@
        
 (require 'window-number)
 (window-number-meta-mode 1)
-
-(require 'expand-region)
-(global-set-key (kbd "C-=") 'er/expand-region)
-
